@@ -7,14 +7,21 @@ import groovy.transform.Canonical
  * Dependency name, license metadata list.
  */
 @Canonical
-class DependencyMetadata {
+class DependencyMetadata implements Serializable {
 
     /**
      * Create Dependency metadata for dependencies without licenses.
      */
-    public static final DependencyMetadata noLicenseMetaData(String dependencyName, String fileName = null) {
-        return new DependencyMetadata(dependency: dependencyName, dependencyFileName: fileName,
-                licenseMetadataList: [new LicenseMetadata(licenseName: "No license found")]
+    public static final DependencyMetadata noLicenseMetaData(String dependencyName,
+                                                             String dependencyVersion = null,
+                                                             String dependencyFriendlyName = null,
+                                                             String dependencyDescription = null,
+                                                             String dependencyUrl = null,
+                                                             String fileName = null) {
+        return new DependencyMetadata(dependency: dependencyName, fileName: fileName,
+                version: dependencyVersion, friendlyName: dependencyFriendlyName,
+                licenseMetadataList: [new LicenseMetadata(licenseName: "No license found")],
+                description: dependencyDescription, url: dependencyUrl, licenseFound: false
         )
     }
 
@@ -29,9 +36,34 @@ class DependencyMetadata {
     String dependency
 
     /**
+     * Dependency url.
+     */
+    String url
+
+    /**
      * Dependency jar file name.
      */
-    String dependencyFileName
+    String fileName
+
+    /**
+     * User-friendly dependency name
+     */
+    String friendlyName
+
+    /**
+     * Description of the library
+     */
+    String description
+
+    /**
+     * Dependency version
+     */
+    String version
+
+    /**
+     * Whether the license was found or not
+     */
+    Boolean licenseFound
 
     /**
      * Check whether metadata list is empty.

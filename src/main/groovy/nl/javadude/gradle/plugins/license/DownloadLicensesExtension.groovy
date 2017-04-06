@@ -13,6 +13,11 @@ class DownloadLicensesExtension {
     Map<Object, Object> licenses
 
     /**
+     * Custom dependency mapping.
+     */
+    Map<Object, Object> dependencies
+
+    /**
      * License aliases.
      */
     Map<Object, List<Object>> aliases
@@ -53,6 +58,16 @@ class DownloadLicensesExtension {
     String reportByLicenseFileName
 
     /**
+     * Fail the build if a dependency has no license detected
+     */
+    boolean failOnNoLicense
+
+    /**
+     * Custom error message printed when failing due to missing licenses
+     */
+    String customNoLicenseFailMessage
+
+    /**
      * Generate xml report.
      */
     boolean xml
@@ -88,6 +103,22 @@ class DownloadLicensesExtension {
     static LicenseMetadata license(name, url = null) {
         new LicenseMetadata(name, url)
     }
+
+    static DependencyMetadata dependency(String dependencyName,
+                                         List<LicenseMetadata> licenses,
+                                         String dependencyUrl = null,
+                                         String dependencyFriendlyName = null,
+                                         String dependencyVersion = null,
+                                         String dependencyDescription = null,
+                                         String fileName = null) {
+
+        new DependencyMetadata(dependency: dependencyName, fileName: fileName,
+                version: dependencyVersion, friendlyName: dependencyFriendlyName,
+                licenseMetadataList: licenses, description: dependencyDescription,
+                licenseFound: true, url: dependencyUrl)
+    }
+
+
 
     /**
      * Configure report container.

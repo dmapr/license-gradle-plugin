@@ -130,6 +130,8 @@ class LicensePlugin implements Plugin<Project> {
 
         downloadLicensesExtension.with {
             // Default for extension
+            failOnNoLicense = false
+            customNoLicenseFailMessage = ""
             reportByDependency = true
             reportByLicenseType = true
             includeProjectDependencies = false
@@ -138,6 +140,7 @@ class LicensePlugin implements Plugin<Project> {
             reportByLicenseFileName = DEFAULT_FILE_NAME_FOR_REPORTS_BY_LICENSE
             excludeDependencies = []
             licenses = [:]
+            dependencies = [:]
             aliases = [:]
             report = new DownloadLicensesReportExtension(html: html, xml: xml, json: json)
             dependencyConfiguration = DEFAULT_DEPENDENCY_CONFIGURATION_TO_HANDLE
@@ -183,6 +186,8 @@ class LicensePlugin implements Plugin<Project> {
      */
     protected void configureTaskDefaults(DownloadLicenses task) {
         task.conventionMapping.with {
+            failOnNoLicense = { downloadLicensesExtension.failOnNoLicense }
+            customNoLicenseFailMessage = { downloadLicensesExtension.customNoLicenseFailMessage }
             reportByDependency = { downloadLicensesExtension.reportByDependency }
             reportByLicenseType = { downloadLicensesExtension.reportByLicenseType }
             reportByDependencyFileName = { downloadLicensesExtension.reportByDependencyFileName }
@@ -190,6 +195,7 @@ class LicensePlugin implements Plugin<Project> {
             includeProjectDependencies = {downloadLicensesExtension.includeProjectDependencies}
             ignoreFatalParseErrors = {downloadLicensesExtension.ignoreFatalParseErrors}
             licenses = { downloadLicensesExtension.licenses }
+            dependencies = { downloadLicensesExtension.dependencies }
             aliases = {downloadLicensesExtension.aliases }
             xml = { downloadLicensesExtension.report.xml.enabled }
             html = { downloadLicensesExtension.report.html.enabled }

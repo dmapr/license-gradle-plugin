@@ -1,6 +1,7 @@
 package nl.javadude.gradle.plugins.license
 
 import groovy.util.slurpersupport.GPathResult
+import org.gradle.api.GradleException
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
@@ -23,6 +24,7 @@ class LicenseResolver {
      */
     private Project project
     private Map<Object, Object> licenses
+    private Map<Object, Object> dependencies
     private Map<LicenseMetadata, List<Object>> aliases
     private List<String> dependenciesToIgnore
     private boolean includeProjectDependencies
@@ -52,6 +54,15 @@ class LicenseResolver {
             resolveProjectDependencies(p).each {
                 rd ->
                 String dependencyDesc = "$rd.moduleVersion.id.group:$rd.moduleVersion.id.name:$rd.moduleVersion.id.version".toString()
+                Map.Entry dependencyEntry = dependencies.find {
+                    dep ->
+                        if(dep.key instanceof String) {
+                            dep.key == dependencyDesc
+                        } else if (dep.key instanceof DependencyGroup) {
+                            rd.moduleVersion.id.group == dep.key.group
+                        }
+                }
+
                 Map.Entry licenseEntry = licenses.find {
                     dep ->
                     if(dep.key instanceof String) {
@@ -60,17 +71,20 @@ class LicenseResolver {
                         rd.moduleVersion.id.group == dep.key.group
                     }
                 }
-                if (licenseEntry != null) {
+
+                if (dependencyEntry != null) {
+                    licenseSet << dependencyEntry.value
+                } else if (licenseEntry != null) {
                     def license = licenseEntry.value
                     def licenseMetadata = license instanceof String ? DownloadLicensesExtension.license(license) : license
                     licenseSet << new DependencyMetadata(
-                            dependency: dependencyDesc, dependencyFileName: rd.file.name, licenseMetadataList: [ licenseMetadata ]
+                            dependency: dependencyDesc, fileName: rd.file.name, licenseMetadataList: [licenseMetadata ], licenseFound: true
                     )
                 } else {
                     Closure<DependencyMetadata> dependencyMetadata = {
                         if(!subprojects[dependencyDesc]) {
                             def depMetadata = retrieveLicensesForDependency(p, dependencyDesc)
-                            depMetadata.dependencyFileName = rd.file.name
+                            depMetadata.fileName = rd.file.name
                             depMetadata
                         } else {
                             noLicenseMetaData(dependencyDesc, rd.file.name)
@@ -102,7 +116,8 @@ class LicenseResolver {
                             if (alias) {
                                 licenseMetadata = alias.key
                             }
-                            new DependencyMetadata(dependency: fileDependency, dependencyFileName: fileDependency, licenseMetadataList: [licenseMetadata])
+
+                            new DependencyMetadata(dependency: fileDependency, fileName: fileDependency, licenseMetadataList: [licenseMetadata])
                         } else {
                             noLicenseMetaData(fileDependency, fileDependency)
                         }
@@ -155,13 +170,13 @@ class LicenseResolver {
         if (project.configurations.any { it.name == dependencyConfiguration }) {
             Configuration configuration = project.configurations.getByName(dependencyConfiguration)
 
-            Set<Dependency> d = configuration.allDependencies.findAll {
+            Set<Dependency> dependencies = configuration.allDependencies.findAll {
                 it instanceof FileCollectionDependency
             }
 
-            d.each {
+            dependencies.each {
                 FileCollectionDependency fileDependency ->
-                    fileDependency.source.files.each {
+                    fileDependency.files.each {
                         if (!dependenciesToIgnore.contains(it.name)) {
                             fileDependencies.add(it.name)
                         }
@@ -220,6 +235,7 @@ class LicenseResolver {
             }
         }
 
+
         DependencyMetadata pomData = new DependencyMetadata(dependency: initialDependency)
 
         xml.licenses.license.each {
@@ -236,6 +252,7 @@ class LicenseResolver {
 
                     }
             }
+
             if (alias) {
                 license = alias.key
             }
@@ -243,15 +260,19 @@ class LicenseResolver {
         }
 
         if (pomData.hasLicense()) {
+            pomData.friendlyName = xml.name
+            pomData.description = xml.description
+            pomData.version = xml.version
+            pomData.licenseFound = true
+            pomData.url = xml.url
             pomData
         } else if (xml.parent.text()) {
             String parentGroup = xml.parent.groupId.text().trim()
             String parentName = xml.parent.artifactId.text().trim()
             String parentVersion = xml.parent.version.text().trim()
-
             retrieveLicensesForDependency(project, "$parentGroup:$parentName:$parentVersion", initialDependency)
         } else {
-            noLicenseMetaData(dependencyDesc)
+            noLicenseMetaData(dependencyDesc, "$xml.version", "$xml.name", "$xml.description")
         }
     }
 }

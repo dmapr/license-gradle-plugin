@@ -1,6 +1,7 @@
 package nl.javadude.gradle.plugins.license
 
 import org.gradle.api.DefaultTask
+import org.gradle.api.GradleException
 import org.gradle.api.internal.ConventionTask
 import org.gradle.api.tasks.*
 
@@ -15,6 +16,11 @@ public class DownloadLicenses extends ConventionTask {
      * Custom license mapping that overrides existent if needed.
      */
     @Input Map<Object, Object> licenses
+
+    /**
+     * Custom dependency mapping that overrides existent if needed.
+     */
+    @Input Map<Object, Object> dependencies
 
     /**
      * Aliases for licences that has different names spelling.
@@ -40,6 +46,16 @@ public class DownloadLicenses extends ConventionTask {
      * Ignore fatal errors when parsing POMs of transitive dependencies.
      */
     @Input boolean ignoreFatalParseErrors
+
+    /**
+     * Fail the build if a dependency has no license detected
+     */
+    @Input boolean failOnNoLicense
+
+    /**
+     * Custom error message printed when failing due to missing licenses
+     */
+    @Input String customNoLicenseFailMessage
 
     /**
      * List of dependencies that will be omitted in the report.
@@ -94,7 +110,7 @@ public class DownloadLicenses extends ConventionTask {
     @TaskAction
     def downloadLicenses() {
         if (!enabled || (!isReportByDependency() && !isReportByLicenseType())
-           || (!isXml() && !isHtml())) {
+           || (!isXml() && !isHtml() && !isJson())) {
             didWork = false;
             return;
         }
@@ -107,11 +123,26 @@ public class DownloadLicenses extends ConventionTask {
                                                       aliases: aliases.collectEntries {
                                                           new MapEntry(resolveAliasKey(it.key), it.value)
                                                       },
+                                                      dependencies: getDependencies(),
                                                       licenses: getLicenses(),
                                                       dependenciesToIgnore: excludeDependencies,
                                                       dependencyConfiguration: dependencyConfiguration)
             licenseResolver.provideLicenseMap4Dependencies()
         }.memoize()
+
+        if (getFailOnNoLicense()) {
+            def missingLicenses = ""
+            dependencyLicensesSet().each {
+                if (!it.getLicenseFound()) {
+                    missingLicenses += it.dependency + " is missing license\n"
+                }
+            }
+
+            if (missingLicenses) {
+                missingLicenses += getCustomNoLicenseFailMessage()
+                throw new GradleException(missingLicenses)
+            }
+        }
 
         // Lazy reporter resolving
         def reporter = { new LicenseReporter(xmlOutputDir: getXmlDestination(), htmlOutputDir: getHtmlDestination(), jsonOutputDir: getJsonDestination()) }

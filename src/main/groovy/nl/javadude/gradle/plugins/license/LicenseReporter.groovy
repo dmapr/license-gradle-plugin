@@ -2,11 +2,14 @@ package nl.javadude.gradle.plugins.license
 
 import groovy.xml.MarkupBuilder
 import groovy.json.*
+import org.gradle.api.logging.Logger
+import org.gradle.api.logging.Logging
 
 /**
  * License file reporter.
  */
 class LicenseReporter {
+    private static final Logger logger = Logging.getLogger(LicenseReporter);
 
     /**
      * Output directory for html reports.
@@ -37,7 +40,12 @@ class LicenseReporter {
                 dependencyMetadataSet.each {
                     entry ->
                         dependency(name: entry.dependency) {
-                            file(entry.dependencyFileName)
+                            file(entry.fileName)
+                            friendlyName(entry.friendlyName)
+                            url(entry.url)
+                            version(entry.version)
+                            description(entry.description)
+                            licenseFound(entry.licenseFound)
                             entry.licenseMetadataList.each {
                                 l ->
                                     def attributes = [name: l.licenseName]
@@ -99,7 +107,12 @@ class LicenseReporter {
                 entry ->
                     return [
                         name: entry.dependency,
-                        file: entry.dependencyFileName,
+                        file: entry.fileName,
+                        friendlyName: entry.friendlyName,
+                        url: entry.url,
+                        description: entry.description,
+                        version: entry.version,
+                        licenseFound: entry.licenseFound,
                         licenses: entry.licenseMetadataList.collect {
                             l -> return [
                                 name: l.licenseName,
@@ -190,6 +203,10 @@ class LicenseReporter {
                     table(align: 'center') {
                         tr {
                             th(){ h3("Dependency") }
+                            th(){ h3("Name") }
+                            th(){ h3("Url") }
+                            th(){ h3("Version") }
+                            th(){ h3("Description") }
                             th(){ h3("Jar") }
                             th(){ h3("License name") }
                             th(){ h3("License text URL") }
@@ -197,10 +214,15 @@ class LicenseReporter {
 
                         dependencyMetadataSet.each {
                             entry ->
+
                                 entry.licenseMetadataList.each { license ->
                                     tr {
                                         td(entry.dependency, class: 'dependencies')
-                                        td(entry.dependencyFileName, class: 'licenseName')
+                                        td(entry.friendlyName, class: 'dependencies')
+                                        td(entry.url, class: 'dependencies')
+                                        td(entry.version, class: 'dependencies')
+                                        td(entry.description, class: 'dependencies')
+                                        td(entry.fileName, class: 'licenseName')
                                         td(license.licenseName, class: 'licenseName')
                                         td(class: 'license') {
                                             if (license.licenseTextUrl) {
@@ -313,7 +335,7 @@ class LicenseReporter {
                     if (!licensesMap.containsKey(license)) {
                         licensesMap.put(license, new HashSet<String>())
                     }
-                    licensesMap.get(license).add(dependencyMetadata.dependencyFileName)
+                    licensesMap.get(license).add(dependencyMetadata.fileName)
                 }
         }
 
